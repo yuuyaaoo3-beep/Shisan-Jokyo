@@ -173,6 +173,11 @@
     .history-total { font-size: 13px; color: var(--color-text-secondary); }
     .chart-container { position: relative; width: 100%; height: 260px; margin-top: 16px; }
     .goal-input { width: 60px !important; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 1.5rem; max-width: 90%; width: 320px; }
+    .modal-title { font-size: 18px; font-weight: 500; margin-bottom: 1rem; }
+    .modal-buttons { display: flex; gap: 8px; margin-top: 1rem; }
   </style>
 </head>
 <body>
@@ -237,7 +242,10 @@
         <textarea id="memo-input" placeholder="今月の投資方針や気づきを記録..."></textarea>
       </div>
 
-      <button class="primary" onclick="saveSnapshot()" style="width: 100%; padding: 14px; font-size: 15px;">📊 今月のデータを記録</button>
+      <div style="display: flex; gap: 8px;">
+        <button class="primary" onclick="saveSnapshot()" style="flex: 1; padding: 14px; font-size: 15px;">📊 今月を記録</button>
+        <button onclick="saveCustomDate()" style="flex: 1; padding: 14px; font-size: 15px;">📅 過去分を記録</button>
+      </div>
     </div>
 
     <div id="tab-history" class="tab-content">
@@ -304,6 +312,24 @@
           <button onclick="clearAllData()" class="danger" style="width: 100%;">全データを削除</button>
           <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 8px;">※この操作は取り消せません</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="custom-date-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-title">過去分の記録</div>
+      <div class="input-row">
+        <label>年</label>
+        <input type="number" id="custom-year" min="2000" max="2100" style="width: 100px;">
+      </div>
+      <div class="input-row">
+        <label>月</label>
+        <input type="number" id="custom-month" min="1" max="12" style="width: 100px;">
+      </div>
+      <div class="modal-buttons">
+        <button onclick="closeCustomDateModal()" style="flex: 1;">キャンセル</button>
+        <button class="primary" onclick="confirmCustomDate()" style="flex: 1;">記録</button>
       </div>
     </div>
   </div>
@@ -505,6 +531,53 @@
       state.history.push(snapshot);
       saveState();
       
+      alert('✅ データを記録しました');
+      switchTab('history');
+      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    }
+
+    function saveCustomDate() {
+      const now = new Date();
+      document.getElementById('custom-year').value = now.getFullYear();
+      document.getElementById('custom-month').value = now.getMonth() + 1;
+      document.getElementById('custom-date-modal').classList.add('active');
+    }
+
+    function closeCustomDateModal() {
+      document.getElementById('custom-date-modal').classList.remove('active');
+    }
+
+    function confirmCustomDate() {
+      const year = parseInt(document.getElementById('custom-year').value);
+      const month = parseInt(document.getElementById('custom-month').value);
+      
+      if (!year || !month || month < 1 || month > 12) {
+        alert('⚠️ 正しい年月を入力してください');
+        return;
+      }
+      
+      state.memo = document.getElementById('memo-input').value;
+      
+      const { total, totalPL, totalInvested } = calculateTotals();
+      const breakdown = calculateRiskBreakdown();
+      
+      const customDate = new Date(year, month - 1, 1);
+      
+      const snapshot = {
+        date: customDate.toISOString(),
+        total,
+        totalPL,
+        totalInvested,
+        breakdown,
+        items: JSON.parse(JSON.stringify(state.items)),
+        memo: state.memo
+      };
+      
+      state.history.push(snapshot);
+      state.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+      saveState();
+      
+      closeCustomDateModal();
       alert('✅ データを記録しました');
       switchTab('history');
       document.querySelectorAll('.tab-btn')[1].classList.add('active');
