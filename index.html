@@ -173,22 +173,34 @@
     .history-total { font-size: 13px; color: var(--color-text-secondary); }
     .chart-container { position: relative; width: 100%; height: 260px; margin-top: 16px; }
     .goal-input { width: 60px !important; }
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 1.5rem; max-width: 90%; width: 320px; }
-    .modal-title { font-size: 18px; font-weight: 500; margin-bottom: 1rem; }
-    .modal-buttons { display: flex; gap: 8px; margin-top: 1rem; }
+    .date-selector { 
+      background: var(--color-background-secondary); 
+      border-radius: var(--border-radius-md); 
+      padding: 12px; 
+      margin-bottom: 1rem;
+    }
+    .date-selector-label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="tab-nav">
-      <button class="tab-btn active" onclick="switchTab('current')">現在</button>
-      <button class="tab-btn" onclick="switchTab('history')">履歴</button>
+      <button class="tab-btn active" onclick="switchTab('current')">記録</button>
+      <button class="tab-btn" onclick="switchTab('history')">推移</button>
       <button class="tab-btn" onclick="switchTab('settings')">設定</button>
     </div>
 
     <div id="tab-current" class="tab-content active">
+      <div class="date-selector">
+        <div class="date-selector-label">記録月</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="number" id="record-year" min="2000" max="2100" style="width: 80px;">
+          <span style="font-size: 14px;">年</span>
+          <input type="number" id="record-month" min="1" max="12" style="width: 60px;">
+          <span style="font-size: 14px;">月</span>
+        </div>
+      </div>
+
       <div class="section">
         <div class="grid-2">
           <div class="metric-card">
@@ -242,10 +254,7 @@
         <textarea id="memo-input" placeholder="今月の投資方針や気づきを記録..."></textarea>
       </div>
 
-      <div style="display: flex; gap: 8px;">
-        <button class="primary" onclick="saveSnapshot()" style="flex: 1; padding: 14px; font-size: 15px;">📊 今月を記録</button>
-        <button onclick="saveCustomDate()" style="flex: 1; padding: 14px; font-size: 15px;">📅 過去分を記録</button>
-      </div>
+      <button class="primary" onclick="saveSnapshot()" style="width: 100%; padding: 14px; font-size: 15px;">📊 記録する</button>
     </div>
 
     <div id="tab-history" class="tab-content">
@@ -260,6 +269,13 @@
         <div class="section-title">総資産推移</div>
         <div class="chart-container">
           <canvas id="asset-chart" role="img" aria-label="月別総資産推移"></canvas>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">最新月のカテゴリ別資産</div>
+        <div class="chart-container">
+          <canvas id="category-chart" role="img" aria-label="カテゴリ別資産割合"></canvas>
         </div>
       </div>
 
@@ -316,24 +332,6 @@
     </div>
   </div>
 
-  <div id="custom-date-modal" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-title">過去分の記録</div>
-      <div class="input-row">
-        <label>年</label>
-        <input type="number" id="custom-year" min="2000" max="2100" style="width: 100px;">
-      </div>
-      <div class="input-row">
-        <label>月</label>
-        <input type="number" id="custom-month" min="1" max="12" style="width: 100px;">
-      </div>
-      <div class="modal-buttons">
-        <button onclick="closeCustomDateModal()" style="flex: 1;">キャンセル</button>
-        <button class="primary" onclick="confirmCustomDate()" style="flex: 1;">記録</button>
-      </div>
-    </div>
-  </div>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script>
     const state = {
@@ -347,10 +345,19 @@
       memo: '',
       goals: { cash: 20, diversified: 60, concentrated: 20 },
       history: [],
-      productRiskMap: {}
+      productRiskMap: {},
+      currentRecordDate: null
     };
 
-    let riskChart, assetChart;
+    let riskChart, assetChart, categoryChart;
+
+    const categoryLabels = {
+      'cash': '現金',
+      'nisa-tsumitate': 'NISA（積立枠）',
+      'nisa-growth': 'NISA（成長投資枠）',
+      'stock': '個別株',
+      'ideco': 'iDeCo'
+    };
 
     function loadState() {
       try {
@@ -362,6 +369,7 @@
       } catch (e) {
         console.log('No saved state');
       }
+      setDefaultRecordDate();
       render();
       loadGoals();
     }
@@ -372,6 +380,29 @@
       } catch (e) {
         console.error('Save failed', e);
       }
+    }
+
+    function setDefaultRecordDate() {
+      let year, month;
+      
+      if (state.currentRecordDate) {
+        const d = new Date(state.currentRecordDate);
+        year = d.getFullYear();
+        month = d.getMonth() + 1;
+      } else if (state.history.length > 0) {
+        const lastRecord = state.history[state.history.length - 1];
+        const lastDate = new Date(lastRecord.date);
+        lastDate.setMonth(lastDate.getMonth() + 1);
+        year = lastDate.getFullYear();
+        month = lastDate.getMonth() + 1;
+      } else {
+        const now = new Date();
+        year = now.getFullYear();
+        month = now.getMonth() + 1;
+      }
+      
+      document.getElementById('record-year').value = year;
+      document.getElementById('record-month').value = month;
     }
 
     function switchTab(tab) {
@@ -494,6 +525,24 @@
       return breakdown;
     }
 
+    function calculateCategoryBreakdown() {
+      const breakdown = {};
+      
+      Object.entries(state.items).forEach(([category, items]) => {
+        breakdown[category] = items.reduce((sum, item) => sum + item.amount, 0);
+      });
+      
+      return breakdown;
+    }
+
+    function loadFromLatestHistory() {
+      if (state.history.length > 0) {
+        const latest = state.history[state.history.length - 1];
+        state.items = JSON.parse(JSON.stringify(latest.items));
+        render();
+      }
+    }
+
     function render() {
       renderItemList('cash', 'cash-list');
       renderItemList('nisa-tsumitate', 'nisa-tsumitate-list');
@@ -513,43 +562,8 @@
     }
 
     function saveSnapshot() {
-      state.memo = document.getElementById('memo-input').value;
-      
-      const { total, totalPL, totalInvested } = calculateTotals();
-      const breakdown = calculateRiskBreakdown();
-      
-      const snapshot = {
-        date: new Date().toISOString(),
-        total,
-        totalPL,
-        totalInvested,
-        breakdown,
-        items: JSON.parse(JSON.stringify(state.items)),
-        memo: state.memo
-      };
-      
-      state.history.push(snapshot);
-      saveState();
-      
-      alert('✅ データを記録しました');
-      switchTab('history');
-      document.querySelectorAll('.tab-btn')[1].classList.add('active');
-    }
-
-    function saveCustomDate() {
-      const now = new Date();
-      document.getElementById('custom-year').value = now.getFullYear();
-      document.getElementById('custom-month').value = now.getMonth() + 1;
-      document.getElementById('custom-date-modal').classList.add('active');
-    }
-
-    function closeCustomDateModal() {
-      document.getElementById('custom-date-modal').classList.remove('active');
-    }
-
-    function confirmCustomDate() {
-      const year = parseInt(document.getElementById('custom-year').value);
-      const month = parseInt(document.getElementById('custom-month').value);
+      const year = parseInt(document.getElementById('record-year').value);
+      const month = parseInt(document.getElementById('record-month').value);
       
       if (!year || !month || month < 1 || month > 12) {
         alert('⚠️ 正しい年月を入力してください');
@@ -560,25 +574,42 @@
       
       const { total, totalPL, totalInvested } = calculateTotals();
       const breakdown = calculateRiskBreakdown();
+      const categoryBreakdown = calculateCategoryBreakdown();
       
-      const customDate = new Date(year, month - 1, 1);
+      const recordDate = new Date(year, month - 1, 1);
+      
+      const existingIndex = state.history.findIndex(h => {
+        const d = new Date(h.date);
+        return d.getFullYear() === year && d.getMonth() === month - 1;
+      });
       
       const snapshot = {
-        date: customDate.toISOString(),
+        date: recordDate.toISOString(),
         total,
         totalPL,
         totalInvested,
         breakdown,
+        categoryBreakdown,
         items: JSON.parse(JSON.stringify(state.items)),
         memo: state.memo
       };
       
-      state.history.push(snapshot);
+      if (existingIndex >= 0) {
+        if (confirm('この月のデータは既に存在します。上書きしますか？')) {
+          state.history[existingIndex] = snapshot;
+        } else {
+          return;
+        }
+      } else {
+        state.history.push(snapshot);
+      }
+      
       state.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+      state.currentRecordDate = null;
       saveState();
       
-      closeCustomDateModal();
       alert('✅ データを記録しました');
+      setDefaultRecordDate();
       switchTab('history');
       document.querySelectorAll('.tab-btn')[1].classList.add('active');
     }
@@ -628,6 +659,12 @@
       const snapshot = state.history[index];
       state.items = JSON.parse(JSON.stringify(snapshot.items));
       state.memo = snapshot.memo;
+      
+      const date = new Date(snapshot.date);
+      state.currentRecordDate = snapshot.date;
+      document.getElementById('record-year').value = date.getFullYear();
+      document.getElementById('record-month').value = date.getMonth() + 1;
+      
       switchTab('current');
       document.querySelectorAll('.tab-btn')[0].classList.add('active');
       render();
@@ -645,6 +682,8 @@
       const diversifiedData = state.history.map(s => s.breakdown.diversified);
       const concentratedData = state.history.map(s => s.breakdown.concentrated);
       
+      const totals = state.history.map(s => s.breakdown.cash + s.breakdown.diversified + s.breakdown.concentrated);
+      
       if (riskChart) riskChart.destroy();
       riskChart = new Chart(document.getElementById('risk-chart'), {
         type: 'bar',
@@ -659,10 +698,27 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed.y;
+                  const total = totals[context.dataIndex];
+                  const percentage = ((value / total) * 100).toFixed(1);
+                  return context.dataset.label + ': ¥' + value.toLocaleString() + ' (' + percentage + '%)';
+                }
+              }
+            }
+          },
           scales: {
             x: { stacked: true },
-            y: { stacked: true, ticks: { callback: v => '¥' + (v / 1000).toFixed(0) + 'K' } }
+            y: { 
+              stacked: true, 
+              ticks: { 
+                callback: v => Math.round(v / 10000) + '万'
+              } 
+            }
           }
         }
       });
@@ -683,10 +739,67 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { ticks: { callback: v => '¥' + (v / 1000).toFixed(0) + 'K' } }
+            y: { ticks: { callback: v => Math.round(v / 10000) + '万' } }
           }
         }
       });
+      
+      if (state.history.length > 0) {
+        const latest = state.history[state.history.length - 1];
+        const categoryBreakdown = latest.categoryBreakdown;
+        
+        const categoryColors = {
+          'cash': '#97C459',
+          'nisa-tsumitate': '#85B7EB',
+          'nisa-growth': '#378ADD',
+          'stock': '#FAC775',
+          'ideco': '#AFA9EC'
+        };
+        
+        const categoryData = [];
+        const categoryLabelsList = [];
+        const categoryColorsList = [];
+        
+        Object.entries(categoryBreakdown).forEach(([category, amount]) => {
+          if (amount > 0) {
+            categoryData.push(amount);
+            categoryLabelsList.push(categoryLabels[category]);
+            categoryColorsList.push(categoryColors[category]);
+          }
+        });
+        
+        const categoryTotal = categoryData.reduce((sum, val) => sum + val, 0);
+        
+        if (categoryChart) categoryChart.destroy();
+        categoryChart = new Chart(document.getElementById('category-chart'), {
+          type: 'pie',
+          data: {
+            labels: categoryLabelsList,
+            datasets: [{
+              data: categoryData,
+              backgroundColor: categoryColorsList
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const value = context.parsed;
+                    const percentage = ((value / categoryTotal) * 100).toFixed(1);
+                    const date = new Date(latest.date);
+                    const dateStr = (date.getMonth() + 1) + '月';
+                    return dateStr + ' ' + context.label + ': ¥' + value.toLocaleString() + ' (' + percentage + '%)';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
     }
 
     function loadGoals() {
@@ -723,8 +836,10 @@
       state.memo = '';
       state.history = [];
       state.productRiskMap = {};
+      state.currentRecordDate = null;
       
       saveState();
+      setDefaultRecordDate();
       render();
       alert('✅ 全データを削除しました');
       switchTab('current');
@@ -732,6 +847,7 @@
     }
 
     loadState();
+    loadFromLatestHistory();
   </script>
 </body>
 </html>
