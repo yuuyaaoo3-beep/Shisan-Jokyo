@@ -13,12 +13,6 @@
   
   <title>投資ポートフォリオ管理</title>
   
-  <!-- アイコン設定 -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="app-icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="app-icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="app-icon-512.png">
-  
   <style>
     :root {
       --color-background-primary: #ffffff;
@@ -137,6 +131,7 @@
       background: var(--color-background-primary); 
       color: var(--color-text-primary); 
     }
+    select { width: 60px; }
     textarea { width: 100%; min-height: 80px; resize: vertical; font-family: var(--font-sans); }
     button { 
       padding: 10px 16px; 
@@ -190,6 +185,9 @@
       margin-bottom: 1rem;
     }
     .date-selector-label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; }
+    .pl-input-group { display: flex; gap: 8px; align-items: center; }
+    .pl-input-group select { width: 50px; }
+    .pl-input-group input { flex: 1; }
   </style>
 </head>
 <body>
@@ -354,6 +352,88 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    // Base64エンコードされたアイコンを設定
+    const icon192Base64 = 'SCRIPTEOF
+cat /tmp/icon192.txt >> index.html
+cat >> index.html << 'SCRIPTEOF2'
+';
+    const icon512Base64 = 'SCRIPTEOF2
+cat /tmp/icon512.txt >> index.html
+cat >> index.html << 'MAINSCRIPT'
+';
+
+    // アイコンを動的に設定
+    function setAppIcons() {
+      // Apple Touch Icon
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (!appleIcon) {
+        appleIcon = document.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = 'data:image/png;base64,' + icon192Base64;
+
+      // Standard icons
+      let icon192 = document.querySelector('link[rel="icon"][sizes="192x192"]');
+      if (!icon192) {
+        icon192 = document.createElement('link');
+        icon192.rel = 'icon';
+        icon192.type = 'image/png';
+        icon192.sizes = '192x192';
+        document.head.appendChild(icon192);
+      }
+      icon192.href = 'data:image/png;base64,' + icon192Base64;
+
+      let icon512 = document.querySelector('link[rel="icon"][sizes="512x512"]');
+      if (!icon512) {
+        icon512 = document.createElement('link');
+        icon512.rel = 'icon';
+        icon512.type = 'image/png';
+        icon512.sizes = '512x512';
+        document.head.appendChild(icon512);
+      }
+      icon512.href = 'data:image/png;base64,' + icon512Base64;
+
+      // Manifest with embedded icons
+      const manifest = {
+        name: "投資ポートフォリオ管理",
+        short_name: "投資管理",
+        description: "個人の投資ポートフォリオを記録・管理するアプリ",
+        start_url: "./index.html",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#378ADD",
+        orientation: "portrait",
+        icons: [
+          {
+            src: 'data:image/png;base64,' + icon192Base64,
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any maskable"
+          },
+          {
+            src: 'data:image/png;base64,' + icon512Base64,
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
+          }
+        ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const manifestURL = URL.createObjectURL(manifestBlob);
+      
+      let manifestLink = document.querySelector('link[rel="manifest"]');
+      if (!manifestLink) {
+        manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        document.head.appendChild(manifestLink);
+      }
+      manifestLink.href = manifestURL;
+    }
+
+    setAppIcons();
+
     const categoryLabels = {
       'cash': '現金',
       'nisa-tsumitate': 'NISA（つみたて）',
@@ -407,9 +487,9 @@
       const item = {
         id: ++itemCounter,
         name: '',
-        quantity: 0,
-        price: 0,
-        bookValue: 0
+        value: 0,
+        plSign: '+',
+        plAmount: 0
       };
       state.items[category].push(item);
       render();
@@ -424,7 +504,7 @@
       const item = state.items[category].find(i => i.id === id);
       if (!item) return;
       
-      if (field === 'name') {
+      if (field === 'name' || field === 'plSign') {
         item[field] = value;
       } else {
         item[field] = parseFloat(value) || 0;
@@ -436,16 +516,16 @@
     function calculateTotals() {
       let totalAssets = 0;
       let totalPL = 0;
-      let totalBookValue = 0;
       
       Object.values(state.items).forEach(items => {
         items.forEach(item => {
-          const value = item.quantity * item.price;
-          totalAssets += value;
-          totalPL += value - item.bookValue;
-          totalBookValue += item.bookValue;
+          totalAssets += item.value;
+          const pl = item.plSign === '+' ? item.plAmount : -item.plAmount;
+          totalPL += pl;
         });
       });
+      
+      const totalBookValue = totalAssets - totalPL;
       
       return { totalAssets, totalPL, totalBookValue };
     }
@@ -455,7 +535,7 @@
       const categoryBreakdown = { cash: 0, 'nisa-tsumitate': 0, 'nisa-growth': 0, stock: 0, ideco: 0 };
       
       Object.entries(state.items).forEach(([category, items]) => {
-        const categoryTotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+        const categoryTotal = items.reduce((sum, item) => sum + item.value, 0);
         categoryBreakdown[category] = categoryTotal;
         
         const risk = riskMapping[category];
@@ -480,37 +560,55 @@
         container.innerHTML = '';
         
         state.items[category].forEach(item => {
-          const value = item.quantity * item.price;
-          const pl = value - item.bookValue;
-          
           const div = document.createElement('div');
           div.className = 'item-card';
-          div.innerHTML = `
-            <div class="item-header">
-              <input type="text" value="${item.name}" placeholder="商品名" 
-                onchange="updateItem('${category}', ${item.id}, 'name', this.value)"
-                style="flex: 1; margin-right: 8px;">
-              <button class="danger item-remove" onclick="removeItem('${category}', ${item.id})">削除</button>
-            </div>
-            <div class="input-row">
-              <label>数量</label>
-              <input type="number" value="${item.quantity}" step="0.01"
-                onchange="updateItem('${category}', ${item.id}, 'quantity', this.value)">
-            </div>
-            <div class="input-row">
-              <label>単価</label>
-              <input type="number" value="${item.price}" step="0.01"
-                onchange="updateItem('${category}', ${item.id}, 'price', this.value)">
-            </div>
-            <div class="input-row">
-              <label>簿価</label>
-              <input type="number" value="${item.bookValue}" step="0.01"
-                onchange="updateItem('${category}', ${item.id}, 'bookValue', this.value)">
-            </div>
-            <div style="margin-top: 8px; font-size: 13px; color: var(--color-text-secondary);">
-              評価額: ¥${value.toLocaleString()} | 損益: ${pl >= 0 ? '+' : ''}¥${pl.toLocaleString()}
-            </div>
-          `;
+          
+          if (category === 'cash') {
+            // 現金カテゴリ: 商品名と金額のみ
+            div.innerHTML = `
+              <div class="item-header">
+                <input type="text" value="${item.name}" placeholder="商品名" 
+                  onchange="updateItem('${category}', ${item.id}, 'name', this.value)"
+                  style="flex: 1; margin-right: 8px;">
+                <button class="danger item-remove" onclick="removeItem('${category}', ${item.id})">削除</button>
+              </div>
+              <div class="input-row">
+                <label>金額</label>
+                <input type="number" value="${item.value}" step="0.01"
+                  onchange="updateItem('${category}', ${item.id}, 'value', this.value)">
+              </div>
+            `;
+          } else {
+            // その他カテゴリ: 商品名、評価額、損益
+            const pl = item.plSign === '+' ? item.plAmount : -item.plAmount;
+            div.innerHTML = `
+              <div class="item-header">
+                <input type="text" value="${item.name}" placeholder="商品名" 
+                  onchange="updateItem('${category}', ${item.id}, 'name', this.value)"
+                  style="flex: 1; margin-right: 8px;">
+                <button class="danger item-remove" onclick="removeItem('${category}', ${item.id})">削除</button>
+              </div>
+              <div class="input-row">
+                <label>評価額</label>
+                <input type="number" value="${item.value}" step="0.01"
+                  onchange="updateItem('${category}', ${item.id}, 'value', this.value)">
+              </div>
+              <div class="input-row">
+                <label>損益</label>
+                <div class="pl-input-group">
+                  <select onchange="updateItem('${category}', ${item.id}, 'plSign', this.value)">
+                    <option value="+" ${item.plSign === '+' ? 'selected' : ''}>+</option>
+                    <option value="-" ${item.plSign === '-' ? 'selected' : ''}>-</option>
+                  </select>
+                  <input type="number" value="${item.plAmount}" step="0.01"
+                    onchange="updateItem('${category}', ${item.id}, 'plAmount', this.value)">
+                </div>
+              </div>
+              <div style="margin-top: 8px; font-size: 13px; color: var(--color-text-secondary);">
+                評価額: ¥${item.value.toLocaleString()} | 損益: ${pl >= 0 ? '+' : ''}¥${pl.toLocaleString()}
+              </div>
+            `;
+          }
           container.appendChild(div);
         });
       });
@@ -841,10 +939,11 @@
     loadState();
     loadFromLatestHistory();
     
-    // スタンドアローンモード検出とデバッグ情報
+    // スタンドアローンモード検出
     if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
       console.log('スタンドアローンモードで起動しています');
     }
   </script>
 </body>
 </html>
+MAINSCRIPT
