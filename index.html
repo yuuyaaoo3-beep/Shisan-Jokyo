@@ -3,12 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- PWA設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="投資管理">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#378ADD">
+  
   <title>投資ポートフォリオ管理</title>
-  <link rel="apple-touch-icon" href="app-icon.png">
-  <link rel="icon" type="image/png" href="app-icon.png">
+  
+  <!-- アイコン設定 -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="app-icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="app-icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="app-icon-512.png">
+  
   <style>
     :root {
       --color-background-primary: #ffffff;
@@ -216,80 +226,93 @@
       </div>
 
       <div class="section">
-        <div class="section-title">保有資産</div>
-        
-        <div class="card">
-          <div style="font-weight: 500; margin-bottom: 12px; font-size: 14px;">現金</div>
-          <div id="cash-list"></div>
-          <button onclick="addItem('cash')" style="width: 100%; margin-top: 8px;">+ 口座を追加</button>
-        </div>
-
-        <div class="card">
-          <div style="font-weight: 500; margin-bottom: 12px; font-size: 14px;">NISA（積立枠）</div>
-          <div id="nisa-tsumitate-list"></div>
-          <button onclick="addItem('nisa-tsumitate')" style="width: 100%; margin-top: 8px;">+ 商品を追加</button>
-        </div>
-
-        <div class="card">
-          <div style="font-weight: 500; margin-bottom: 12px; font-size: 14px;">NISA（成長投資枠）</div>
-          <div id="nisa-growth-list"></div>
-          <button onclick="addItem('nisa-growth')" style="width: 100%; margin-top: 8px;">+ 商品を追加</button>
-        </div>
-
-        <div class="card">
-          <div style="font-weight: 500; margin-bottom: 12px; font-size: 14px;">個別株</div>
-          <div id="stock-list"></div>
-          <button onclick="addItem('stock')" style="width: 100%; margin-top: 8px;">+ 銘柄を追加</button>
-        </div>
-
-        <div class="card">
-          <div style="font-weight: 500; margin-bottom: 12px; font-size: 14px;">iDeCo</div>
-          <div id="ideco-list"></div>
-          <button onclick="addItem('ideco')" style="width: 100%; margin-top: 8px;">+ 商品を追加</button>
+        <div class="section-title">カテゴリー別</div>
+        <div id="category-items">
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="font-weight: 500;">💰 現金</div>
+              <button onclick="addItem('cash')" style="padding: 6px 12px; font-size: 13px;">+ 追加</button>
+            </div>
+            <div id="items-cash"></div>
+          </div>
+          
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="font-weight: 500;">📊 NISA（つみたて投資枠）</div>
+              <button onclick="addItem('nisa-tsumitate')" style="padding: 6px 12px; font-size: 13px;">+ 追加</button>
+            </div>
+            <div id="items-nisa-tsumitate"></div>
+          </div>
+          
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="font-weight: 500;">📈 NISA（成長投資枠）</div>
+              <button onclick="addItem('nisa-growth')" style="padding: 6px 12px; font-size: 13px;">+ 追加</button>
+            </div>
+            <div id="items-nisa-growth"></div>
+          </div>
+          
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="font-weight: 500;">📉 個別株</div>
+              <button onclick="addItem('stock')" style="padding: 6px 12px; font-size: 13px;">+ 追加</button>
+            </div>
+            <div id="items-stock"></div>
+          </div>
+          
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="font-weight: 500;">🏦 iDeCo</div>
+              <button onclick="addItem('ideco')" style="padding: 6px 12px; font-size: 13px;">+ 追加</button>
+            </div>
+            <div id="items-ideco"></div>
+          </div>
         </div>
       </div>
 
       <div class="section">
         <div class="section-title">メモ</div>
-        <textarea id="memo-input" placeholder="今月の投資方針や気づきを記録..."></textarea>
+        <textarea id="memo-input" placeholder="今月の振り返りや気づきなどを記録..."></textarea>
       </div>
 
-      <button class="primary" onclick="saveSnapshot()" style="width: 100%; padding: 14px; font-size: 15px;">📊 記録する</button>
+      <div class="section">
+        <button class="primary" onclick="saveSnapshot()" style="width: 100%;">💾 今月のデータを保存</button>
+      </div>
     </div>
 
     <div id="tab-history" class="tab-content">
       <div class="section">
-        <div class="section-title">リスク度推移</div>
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-label">前月比</div>
+            <div class="metric-value" id="mom-change">-</div>
+            <div class="metric-sub" id="mom-pct">-</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">記録回数</div>
+            <div class="metric-value" id="record-count">0回</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">リスク区分別推移</div>
         <div class="chart-container">
-          <canvas id="risk-chart" role="img" aria-label="月別リスク度推移"></canvas>
+          <canvas id="risk-chart"></canvas>
         </div>
       </div>
 
       <div class="section">
         <div class="section-title">総資産推移</div>
         <div class="chart-container">
-          <canvas id="asset-chart" role="img" aria-label="月別総資産推移"></canvas>
+          <canvas id="asset-chart"></canvas>
         </div>
       </div>
 
       <div class="section">
-        <div class="section-title">最新月のカテゴリ別資産</div>
+        <div class="section-title">カテゴリー別構成比</div>
         <div class="chart-container">
-          <canvas id="category-chart" role="img" aria-label="カテゴリ別資産割合"></canvas>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">前月比</div>
-        <div class="grid-2">
-          <div class="metric-card">
-            <div class="metric-label">資産増減</div>
-            <div class="metric-value" id="mom-change">-</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">増減率</div>
-            <div class="metric-value" id="mom-pct">-</div>
-          </div>
+          <canvas id="category-chart"></canvas>
         </div>
       </div>
 
@@ -301,40 +324,53 @@
 
     <div id="tab-settings" class="tab-content">
       <div class="section">
-        <div class="section-title">目標比率</div>
+        <div class="section-title">リスク区分の目標比率</div>
         <div class="card">
           <div class="input-row">
             <label>現金</label>
-            <input type="number" id="goal-cash" class="goal-input" min="0" max="100" value="20">
-            <span style="font-size: 14px;">%</span>
+            <input type="number" id="goal-cash" class="goal-input" min="0" max="100"> %
           </div>
           <div class="input-row">
             <label>分散投資</label>
-            <input type="number" id="goal-diversified" class="goal-input" min="0" max="100" value="60">
-            <span style="font-size: 14px;">%</span>
+            <input type="number" id="goal-diversified" class="goal-input" min="0" max="100"> %
           </div>
           <div class="input-row">
             <label>集中投資</label>
-            <input type="number" id="goal-concentrated" class="goal-input" min="0" max="100" value="20">
-            <span style="font-size: 14px;">%</span>
+            <input type="number" id="goal-concentrated" class="goal-input" min="0" max="100"> %
           </div>
-          <button onclick="saveGoals()" style="width: 100%; margin-top: 12px;">保存</button>
+          <div style="margin-top: 12px; font-size: 13px; color: var(--color-text-secondary);">
+            ※ 合計が100%になるように設定してください
+          </div>
         </div>
+        <button class="primary" onclick="saveGoals()" style="width: 100%; margin-top: 12px;">保存</button>
       </div>
 
       <div class="section">
         <div class="section-title">データ管理</div>
-        <div class="card">
-          <button onclick="clearAllData()" class="danger" style="width: 100%;">全データを削除</button>
-          <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 8px;">※この操作は取り消せません</div>
-        </div>
+        <button class="danger" onclick="clearAllData()" style="width: 100%;">🗑️ 全データ削除</button>
       </div>
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const state = {
+    const categoryLabels = {
+      'cash': '現金',
+      'nisa-tsumitate': 'NISA（つみたて）',
+      'nisa-growth': 'NISA（成長）',
+      'stock': '個別株',
+      'ideco': 'iDeCo'
+    };
+
+    const riskMapping = {
+      'cash': 'cash',
+      'nisa-tsumitate': 'diversified',
+      'nisa-growth': 'diversified',
+      'stock': 'concentrated',
+      'ideco': 'diversified'
+    };
+
+    let state = {
       items: {
         cash: [],
         'nisa-tsumitate': [],
@@ -343,222 +379,180 @@
         ideco: []
       },
       memo: '',
-      goals: { cash: 20, diversified: 60, concentrated: 20 },
       history: [],
+      goals: { cash: 10, diversified: 80, concentrated: 10 },
       productRiskMap: {},
       currentRecordDate: null
     };
 
-    let riskChart, assetChart, categoryChart;
+    let assetChart, riskChart, categoryChart;
+    let itemCounter = 0;
 
-    const categoryLabels = {
-      'cash': '現金',
-      'nisa-tsumitate': 'NISA（積立枠）',
-      'nisa-growth': 'NISA（成長投資枠）',
-      'stock': '個別株',
-      'ideco': 'iDeCo'
-    };
-
-    function loadState() {
-      try {
-        const saved = localStorage.getItem('investment-state');
-        if (saved) {
-          const data = JSON.parse(saved);
-          Object.assign(state, data);
-        }
-      } catch (e) {
-        console.log('No saved state');
-      }
-      setDefaultRecordDate();
-      render();
-      loadGoals();
-    }
-
-    function saveState() {
-      try {
-        localStorage.setItem('investment-state', JSON.stringify(state));
-      } catch (e) {
-        console.error('Save failed', e);
-      }
-    }
-
-    function setDefaultRecordDate() {
-      let year, month;
-      
-      if (state.currentRecordDate) {
-        const d = new Date(state.currentRecordDate);
-        year = d.getFullYear();
-        month = d.getMonth() + 1;
-      } else if (state.history.length > 0) {
-        const lastRecord = state.history[state.history.length - 1];
-        const lastDate = new Date(lastRecord.date);
-        lastDate.setMonth(lastDate.getMonth() + 1);
-        year = lastDate.getFullYear();
-        month = lastDate.getMonth() + 1;
-      } else {
-        const now = new Date();
-        year = now.getFullYear();
-        month = now.getMonth() + 1;
-      }
-      
-      document.getElementById('record-year').value = year;
-      document.getElementById('record-month').value = month;
-    }
-
-    function switchTab(tab) {
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      event.target.classList.add('active');
-      document.getElementById('tab-' + tab).classList.add('active');
       
-      if (tab === 'history') {
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      event.target.classList.add('active');
+      
+      if (tabName === 'history') {
         renderHistory();
         renderCharts();
+      } else if (tabName === 'settings') {
+        loadGoals();
       }
     }
 
     function addItem(category) {
-      const id = Date.now().toString();
       const item = {
-        id,
+        id: ++itemCounter,
         name: '',
-        amount: 0,
-        pl: 0,
-        risk: category === 'cash' ? 'cash' : 'diversified'
+        quantity: 0,
+        price: 0,
+        bookValue: 0
       };
       state.items[category].push(item);
       render();
     }
 
     function removeItem(category, id) {
-      state.items[category] = state.items[category].filter(i => i.id !== id);
+      state.items[category] = state.items[category].filter(item => item.id !== id);
       render();
-      saveState();
     }
 
     function updateItem(category, id, field, value) {
       const item = state.items[category].find(i => i.id === id);
-      if (item) {
-        if (field === 'name' && value && category !== 'cash') {
-          if (!state.productRiskMap[value]) {
-            state.productRiskMap[value] = item.risk || 'diversified';
-          } else {
-            item.risk = state.productRiskMap[value];
-          }
-        }
-        if (field === 'risk' && item.name) {
-          state.productRiskMap[item.name] = value;
-        }
-        item[field] = field === 'amount' || field === 'pl' ? parseFloat(value) || 0 : value;
-        render();
-        saveState();
-      }
-    }
-
-    function renderItemList(category, container) {
-      const list = document.getElementById(container);
-      list.innerHTML = '';
+      if (!item) return;
       
-      state.items[category].forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'item-card';
-        
-        const nameLabel = category === 'cash' ? '口座名' : '商品名';
-        const amountLabel = '保有額';
-        const plLabel = '損益額';
-        
-        div.innerHTML = `
-          <div class="item-header">
-            <input type="text" value="${item.name}" placeholder="${nameLabel}" 
-              onchange="updateItem('${category}', '${item.id}', 'name', this.value)"
-              style="flex: 1; margin-right: 8px;">
-            <button class="item-remove danger" onclick="removeItem('${category}', '${item.id}')">削除</button>
-          </div>
-          <div class="input-row">
-            <label>${amountLabel}</label>
-            <input type="number" value="${item.amount}" 
-              onchange="updateItem('${category}', '${item.id}', 'amount', this.value)">
-          </div>
-          ${category !== 'cash' ? `
-            <div class="input-row">
-              <label>${plLabel}</label>
-              <input type="number" value="${item.pl}" 
-                onchange="updateItem('${category}', '${item.id}', 'pl', this.value)">
-            </div>
-            <div class="input-row">
-              <label>リスク度</label>
-              <select onchange="updateItem('${category}', '${item.id}', 'risk', this.value)">
-                <option value="diversified" ${item.risk === 'diversified' ? 'selected' : ''}>分散投資</option>
-                <option value="concentrated" ${item.risk === 'concentrated' ? 'selected' : ''}>集中投資</option>
-              </select>
-            </div>
-          ` : ''}
-        `;
-        list.appendChild(div);
-      });
+      if (field === 'name') {
+        item[field] = value;
+      } else {
+        item[field] = parseFloat(value) || 0;
+      }
+      
+      render();
     }
 
     function calculateTotals() {
-      let total = 0;
+      let totalAssets = 0;
       let totalPL = 0;
-      let totalInvested = 0;
+      let totalBookValue = 0;
       
-      Object.values(state.items).flat().forEach(item => {
-        total += item.amount;
-        totalPL += item.pl || 0;
-      });
-      
-      totalInvested = total - totalPL;
-      
-      return { total, totalPL, totalInvested };
-    }
-
-    function calculateRiskBreakdown() {
-      const breakdown = { cash: 0, diversified: 0, concentrated: 0 };
-      
-      Object.entries(state.items).forEach(([category, items]) => {
+      Object.values(state.items).forEach(items => {
         items.forEach(item => {
-          breakdown[item.risk] += item.amount;
+          const value = item.quantity * item.price;
+          totalAssets += value;
+          totalPL += value - item.bookValue;
+          totalBookValue += item.bookValue;
         });
       });
       
-      return breakdown;
+      return { totalAssets, totalPL, totalBookValue };
     }
 
-    function calculateCategoryBreakdown() {
-      const breakdown = {};
+    function calculateBreakdown() {
+      const breakdown = { cash: 0, diversified: 0, concentrated: 0 };
+      const categoryBreakdown = { cash: 0, 'nisa-tsumitate': 0, 'nisa-growth': 0, stock: 0, ideco: 0 };
       
       Object.entries(state.items).forEach(([category, items]) => {
-        breakdown[category] = items.reduce((sum, item) => sum + item.amount, 0);
+        const categoryTotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+        categoryBreakdown[category] = categoryTotal;
+        
+        const risk = riskMapping[category];
+        breakdown[risk] += categoryTotal;
       });
       
-      return breakdown;
+      return { breakdown, categoryBreakdown };
+    }
+
+    function render() {
+      const { totalAssets, totalPL, totalBookValue } = calculateTotals();
+      
+      document.getElementById('total-assets').textContent = '¥' + totalAssets.toLocaleString();
+      document.getElementById('total-pl').textContent = (totalPL >= 0 ? '+' : '') + '¥' + totalPL.toLocaleString();
+      document.getElementById('total-pl').style.color = totalPL >= 0 ? 'var(--color-text-success)' : 'var(--color-text-danger)';
+      
+      const plPct = totalBookValue > 0 ? ((totalPL / totalBookValue) * 100).toFixed(2) : 0;
+      document.getElementById('total-pl-pct').textContent = (totalPL >= 0 ? '+' : '') + plPct + '%';
+      
+      Object.keys(state.items).forEach(category => {
+        const container = document.getElementById(`items-${category}`);
+        container.innerHTML = '';
+        
+        state.items[category].forEach(item => {
+          const value = item.quantity * item.price;
+          const pl = value - item.bookValue;
+          
+          const div = document.createElement('div');
+          div.className = 'item-card';
+          div.innerHTML = `
+            <div class="item-header">
+              <input type="text" value="${item.name}" placeholder="商品名" 
+                onchange="updateItem('${category}', ${item.id}, 'name', this.value)"
+                style="flex: 1; margin-right: 8px;">
+              <button class="danger item-remove" onclick="removeItem('${category}', ${item.id})">削除</button>
+            </div>
+            <div class="input-row">
+              <label>数量</label>
+              <input type="number" value="${item.quantity}" step="0.01"
+                onchange="updateItem('${category}', ${item.id}, 'quantity', this.value)">
+            </div>
+            <div class="input-row">
+              <label>単価</label>
+              <input type="number" value="${item.price}" step="0.01"
+                onchange="updateItem('${category}', ${item.id}, 'price', this.value)">
+            </div>
+            <div class="input-row">
+              <label>簿価</label>
+              <input type="number" value="${item.bookValue}" step="0.01"
+                onchange="updateItem('${category}', ${item.id}, 'bookValue', this.value)">
+            </div>
+            <div style="margin-top: 8px; font-size: 13px; color: var(--color-text-secondary);">
+              評価額: ¥${value.toLocaleString()} | 損益: ${pl >= 0 ? '+' : ''}¥${pl.toLocaleString()}
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      });
+      
+      document.getElementById('memo-input').value = state.memo;
+    }
+
+    function saveState() {
+      localStorage.setItem('portfolio-state', JSON.stringify(state));
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem('portfolio-state');
+      if (saved) {
+        state = JSON.parse(saved);
+        itemCounter = Math.max(0, ...Object.values(state.items).flatMap(items => items.map(i => i.id)));
+      }
+      render();
+    }
+
+    function setDefaultRecordDate() {
+      const now = new Date();
+      state.currentRecordDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      document.getElementById('record-year').value = now.getFullYear();
+      document.getElementById('record-month').value = now.getMonth() + 1;
     }
 
     function loadFromLatestHistory() {
       if (state.history.length > 0) {
         const latest = state.history[state.history.length - 1];
         state.items = JSON.parse(JSON.stringify(latest.items));
+        state.memo = '';
+        
+        const now = new Date();
+        state.currentRecordDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        document.getElementById('record-year').value = now.getFullYear();
+        document.getElementById('record-month').value = now.getMonth() + 1;
+        
         render();
+      } else {
+        setDefaultRecordDate();
       }
-    }
-
-    function render() {
-      renderItemList('cash', 'cash-list');
-      renderItemList('nisa-tsumitate', 'nisa-tsumitate-list');
-      renderItemList('nisa-growth', 'nisa-growth-list');
-      renderItemList('stock', 'stock-list');
-      renderItemList('ideco', 'ideco-list');
-      
-      const { total, totalPL, totalInvested } = calculateTotals();
-      const plPct = totalInvested > 0 ? ((totalPL / totalInvested) * 100).toFixed(2) : 0;
-      
-      document.getElementById('total-assets').textContent = '¥' + total.toLocaleString();
-      document.getElementById('total-pl').textContent = (totalPL >= 0 ? '+' : '') + '¥' + totalPL.toLocaleString();
-      document.getElementById('total-pl-pct').textContent = (totalPL >= 0 ? '+' : '') + plPct + '%';
-      document.getElementById('total-pl').style.color = totalPL >= 0 ? 'var(--color-text-success)' : 'var(--color-text-danger)';
-      
-      document.getElementById('memo-input').value = state.memo;
     }
 
     function saveSnapshot() {
@@ -570,46 +564,42 @@
         return;
       }
       
+      const recordDate = `${year}-${String(month).padStart(2, '0')}`;
+      
+      const existingIndex = state.history.findIndex(h => h.date === recordDate);
+      if (existingIndex !== -1) {
+        if (!confirm(`${year}年${month}月のデータは既に存在します。上書きしますか?`)) {
+          return;
+        }
+      }
+      
+      const { totalAssets, totalPL, totalBookValue } = calculateTotals();
+      const { breakdown, categoryBreakdown } = calculateBreakdown();
+      
       state.memo = document.getElementById('memo-input').value;
       
-      const { total, totalPL, totalInvested } = calculateTotals();
-      const breakdown = calculateRiskBreakdown();
-      const categoryBreakdown = calculateCategoryBreakdown();
-      
-      const recordDate = new Date(year, month - 1, 1);
-      
-      const existingIndex = state.history.findIndex(h => {
-        const d = new Date(h.date);
-        return d.getFullYear() === year && d.getMonth() === month - 1;
-      });
-      
       const snapshot = {
-        date: recordDate.toISOString(),
-        total,
-        totalPL,
-        totalInvested,
+        date: recordDate,
+        items: JSON.parse(JSON.stringify(state.items)),
+        total: totalAssets,
+        pl: totalPL,
+        bookValue: totalBookValue,
         breakdown,
         categoryBreakdown,
-        items: JSON.parse(JSON.stringify(state.items)),
         memo: state.memo
       };
       
-      if (existingIndex >= 0) {
-        if (confirm('この月のデータは既に存在します。上書きしますか？')) {
-          state.history[existingIndex] = snapshot;
-        } else {
-          return;
-        }
+      if (existingIndex !== -1) {
+        state.history[existingIndex] = snapshot;
       } else {
         state.history.push(snapshot);
       }
       
-      state.history.sort((a, b) => new Date(a.date) - new Date(b.date));
-      state.currentRecordDate = null;
-      saveState();
+      state.history.sort((a, b) => a.date.localeCompare(b.date));
       
-      alert('✅ データを記録しました');
-      setDefaultRecordDate();
+      saveState();
+      alert(`✅ ${year}年${month}月のデータを保存しました`);
+      
       switchTab('history');
       document.querySelectorAll('.tab-btn')[1].classList.add('active');
     }
@@ -618,25 +608,26 @@
       const list = document.getElementById('history-list');
       list.innerHTML = '';
       
+      document.getElementById('record-count').textContent = state.history.length + '回';
+      
       if (state.history.length === 0) {
-        list.innerHTML = '<div style="color: var(--color-text-secondary); font-size: 14px; text-align: center; padding: 2rem;">記録がありません</div>';
+        list.innerHTML = '<div style="text-align: center; color: var(--color-text-secondary); padding: 2rem;">まだ記録がありません</div>';
         return;
       }
       
-      const sorted = [...state.history].reverse();
-      
-      sorted.forEach((snapshot, idx) => {
+      state.history.slice().reverse().forEach((snapshot, reverseIndex) => {
+        const index = state.history.length - 1 - reverseIndex;
         const date = new Date(snapshot.date);
-        const dateStr = date.getFullYear() + '年' + (date.getMonth() + 1) + '月';
+        const dateStr = `${date.getFullYear()}年${date.getMonth() + 1}月`;
         
         const div = document.createElement('div');
         div.className = 'history-item';
+        div.onclick = () => loadSnapshot(index);
         div.innerHTML = `
           <div class="history-date">${dateStr}</div>
-          <div class="history-total">総資産: ¥${snapshot.total.toLocaleString()} / 損益: ${(snapshot.totalPL >= 0 ? '+' : '')}¥${snapshot.totalPL.toLocaleString()}</div>
-          ${snapshot.memo ? `<div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 4px;">${snapshot.memo}</div>` : ''}
+          <div class="history-total">総資産: ¥${snapshot.total.toLocaleString()}</div>
+          ${snapshot.memo ? `<div style="font-size: 13px; color: var(--color-text-tertiary); margin-top: 4px;">${snapshot.memo}</div>` : ''}
         `;
-        div.onclick = () => loadSnapshot(state.history.length - 1 - idx);
         list.appendChild(div);
       });
       
@@ -824,7 +815,7 @@
     }
 
     function clearAllData() {
-      if (!confirm('本当に全データを削除しますか？この操作は取り消せません。')) return;
+      if (!confirm('本当に全データを削除しますか?この操作は取り消せません。')) return;
       
       state.items = {
         cash: [],
@@ -846,8 +837,14 @@
       document.querySelectorAll('.tab-btn')[0].classList.add('active');
     }
 
+    // 初期化
     loadState();
     loadFromLatestHistory();
+    
+    // スタンドアローンモード検出とデバッグ情報
+    if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+      console.log('スタンドアローンモードで起動しています');
+    }
   </script>
 </body>
 </html>
